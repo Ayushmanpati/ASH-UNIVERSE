@@ -10,13 +10,6 @@
   }
 }
 
-/* Hide default OS cursor site-wide on desktop */
-@media (hover: hover) {
-  html, body, a, button, [role="button"], select, textarea, input, .interactive {
-    cursor: none !important;
-  }
-}
-
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -164,4 +157,5 @@
 .animate-scanline {
   animation: scanline 6s linear infinite;
 }
+
 

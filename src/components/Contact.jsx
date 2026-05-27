@@ -62,7 +62,7 @@ export default function Contact() {
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/5 rounded-full text-xs text-textMuted font-grotesk">
             <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
             <MapPin size={12} className="text-accent" />
-            Gunupur, Odisha, India 🇮🇳
+            Bhubaneswar, Odisha, India 🇮🇳
           </div>
         </div>
 

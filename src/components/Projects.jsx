@@ -131,7 +131,7 @@ export default function Projects() {
       </div>
 
       {/* Mobile Stack View */}
-      <div className="md:hidden px-6 flex flex-col items-center gap-6">
+      <div className="sm:hidden px-6 flex flex-col items-center gap-6">
         {PROJECTS.map((project, index) => (
           <div key={`mobile-${project.title}-${index}`} className="w-[min(300px,90vw)]">
             <ProjectCard project={project} />
@@ -140,7 +140,7 @@ export default function Projects() {
       </div>
 
       {/* Desktop Infinite Scrolling Marquee */}
-      <div className="hidden md:block w-full overflow-hidden hover-pause relative py-8">
+      <div className="hidden sm:block w-full overflow-hidden hover-pause relative py-8">
         {/* Fade gradients */}
         <div className="absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-black to-transparent pointer-events-none z-10" />
         <div className="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-black to-transparent pointer-events-none z-10" />

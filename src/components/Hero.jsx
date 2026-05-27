@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowDown } from "lucide-react";
 import ParticlesBg from "./ParticlesBg";
@@ -13,48 +13,60 @@ const TAGLINES = [
   "from notebooks → production",
 ];
 
-const SCRAMBLE_CHARS = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@#$%&*?+=-アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
+const SCRAMBLE_CHARS = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@#$%&*?+=-アウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
+
+function ScrambleLetter({ char, triggerOnMount, delay = 0 }) {
+  const [displayChar, setDisplayChar] = useState(char);
+  const isScrambling = useRef(false);
+
+  const runScramble = () => {
+    if (isScrambling.current) return;
+    isScrambling.current = true;
+    
+    let count = 0;
+    const maxCycles = 12;
+    const interval = setInterval(() => {
+      setDisplayChar(SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)]);
+      count++;
+      
+      if (count >= maxCycles) {
+        clearInterval(interval);
+        setDisplayChar(char);
+        isScrambling.current = false;
+      }
+    }, 40);
+  };
+
+  useEffect(() => {
+    if (triggerOnMount) {
+      const timeout = setTimeout(() => {
+        runScramble();
+      }, delay);
+      return () => clearTimeout(timeout);
+    }
+  }, [triggerOnMount, delay]);
+
+  return (
+    <span
+      className="inline-block cursor-pointer transition-colors duration-200 hover:text-accent"
+      onMouseEnter={runScramble}
+    >
+      {displayChar}
+    </span>
+  );
+}
 
 export default function Hero() {
   const [taglineIdx, setTaglineIdx] = useState(0);
-  const [scrambledText, setScrambledText] = useState("ayush");
-  const targetText = "ayush";
+  const [mounted, setMounted] = useState(false);
 
   // Tagline rotation
   useEffect(() => {
+    setMounted(true);
     const interval = setInterval(() => {
       setTaglineIdx((prev) => (prev + 1) % TAGLINES.length);
     }, 3500);
     return () => clearInterval(interval);
-  }, []);
-
-  // Scramble effect function
-  const triggerScramble = () => {
-    let iteration = 0;
-    const interval = setInterval(() => {
-      setScrambledText((prev) =>
-        targetText
-          .split("")
-          .map((char, index) => {
-            if (char === " ") return " ";
-            if (index < iteration) {
-              return targetText[index];
-            }
-            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-          })
-          .join("")
-      );
-
-      if (iteration >= targetText.length) {
-        clearInterval(interval);
-      }
-      iteration += 1 / 3;
-    }, 30);
-  };
-
-  // Run scramble on mount
-  useEffect(() => {
-    triggerScramble();
   }, []);
 
   return (
@@ -84,19 +96,27 @@ export default function Hero() {
           hi there, welcome to my universe
         </motion.span>
 
-        {/* Large bold header with scramble on hover */}
+        {/* Large bold header with letter-by-letter scramble */}
         <motion.h1
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1 }}
-          onMouseEnter={triggerScramble}
           className="scramble-title font-bold tracking-tighter leading-none cursor-pointer text-white hover:text-accent transition-colors duration-300 pb-2 relative flex items-baseline justify-center"
           style={{ 
             fontSize: "clamp(52px, 10vw, 82px)", 
             fontFamily: '"Space Grotesk", sans-serif' 
           }}
         >
-          <span>{scrambledText}</span>
+          <span className="flex gap-[1px]">
+            {"ayush".split("").map((char, index) => (
+              <ScrambleLetter
+                key={index}
+                char={char}
+                triggerOnMount={mounted}
+                delay={200 + index * 100}
+              />
+            ))}
+          </span>
           <motion.span
             animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
             transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
@@ -124,7 +144,7 @@ export default function Hero() {
             {["ア", "ユ", "シ", "ュ", "マ", "ン"].map((char, index) => (
               <span
                 key={index}
-                className="animate-katakana"
+                className="animate-katakana text-[#333]"
                 style={{ animationDelay: `${index * 0.15}s` }}
               >
                 {char}

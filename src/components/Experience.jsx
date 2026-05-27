@@ -75,19 +75,19 @@ export default function Experience() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
-          className="relative pl-0 md:pl-12"
+          className="relative pl-0 sm:pl-12"
         >
           {/* Glowing Vertical Line - Desktop Only */}
           <motion.div
             variants={lineVariants}
             style={{ originY: 0 }}
-            className="absolute left-[15px] top-3 bottom-3 w-[2px] bg-gradient-to-b from-accent via-accent/50 to-transparent hidden md:block"
+            className="absolute left-[15px] top-3 bottom-3 w-[2px] bg-gradient-to-b from-accent via-accent/50 to-transparent hidden sm:block"
           />
 
           {EXPERIENCES.map((exp) => (
             <div key={exp.company} className="relative mb-12 last:mb-0">
               {/* Timeline Bullet Indicator - Desktop Only */}
-              <div className="absolute -left-[42px] top-1.5 z-10 items-center justify-center hidden md:flex">
+              <div className="absolute -left-[42px] top-1.5 z-10 items-center justify-center hidden sm:flex">
                 <div className="w-[16px] h-[16px] rounded-full bg-black border-[3px] border-accent ring-4 ring-accent/15" />
               </div>
 

@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
-  { label: "about", href: "#about" },
-  { label: "skills", href: "#skills" },
-  { label: "work", href: "#work" },
-  { label: "experience", href: "#experience" },
+  { label: "about",   href: "#about" },
+  { label: "skills",  href: "#skills" },
+  { label: "work",    href: "#work" },
+  { label: "certs",   href: "#certifications" },
   { label: "contact", href: "#contact" },
 ];
 
@@ -41,7 +41,7 @@ export default function Navbar() {
           </a>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden sm:flex items-center gap-8">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.label}
@@ -63,7 +63,7 @@ export default function Navbar() {
           {/* Mobile Nav Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden text-white hover:text-accent transition-colors focus:outline-none"
+            className="sm:hidden text-white hover:text-accent transition-colors focus:outline-none"
             aria-label="Toggle menu"
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -79,7 +79,7 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="fixed inset-0 w-full h-screen bg-black/95 z-40 flex flex-col justify-center items-center px-6"
+            className="fixed inset-0 w-full h-screen bg-black/95 z-40 flex flex-col justify-center items-center px-6 sm:hidden"
           >
             <nav className="flex flex-col gap-6 items-center">
               {NAV_LINKS.map((link, idx) => (

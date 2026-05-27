@@ -6,14 +6,16 @@ import Skills from "./components/Skills";
 import Projects from "./components/Projects";
 import Experience from "./components/Experience";
 import Achievements from "./components/Achievements";
+import Certifications from "./components/Certifications";
 import Contact from "./components/Contact";
 
 export default function App() {
   const GlowingDivider = () => (
-    <div className="w-full flex justify-center py-4 relative overflow-hidden pointer-events-none select-none">
-      <div className="w-3/4 md:w-1/2 h-[1px] bg-gradient-to-r from-transparent via-accent/40 to-transparent relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-[6px] bg-accent/30 blur-[4px] rounded-full" />
-      </div>
+    <div className="w-full flex justify-center py-12 relative overflow-hidden pointer-events-none select-none">
+      <div 
+        className="w-20 h-1 bg-accent rounded-full blur-[0.5px]" 
+        style={{ boxShadow: "0 0 20px #4DFFB4" }}
+      />
     </div>
   );
 
@@ -57,6 +59,11 @@ export default function App() {
 
         {/* Wins & Recognition */}
         <Achievements />
+
+        <GlowingDivider />
+
+        {/* Certifications — 3D Flip Cards */}
+        <Certifications />
 
         <GlowingDivider />
 

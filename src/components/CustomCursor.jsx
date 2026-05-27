@@ -1,177 +1,269 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 export default function CustomCursor() {
-  const dotRef = useRef(null);
-  const ringRef = useRef(null);
-  
-  const [isMobile, setIsMobile] = useState(true);
-  const [cursorType, setCursorType] = useState("default"); // "default", "interactive", "heading"
-  const [isVisible, setIsVisible] = useState(false);
-
-  // Mouse coordinate refs
-  const mouseCoords = useRef({ x: -100, y: -100 });
-  const ringCoords = useRef({ x: -100, y: -100 });
+  const dotWrapRef  = useRef(null); // outer: position only — no CSS transition
+  const dotRef      = useRef(null); // inner: size/color transitions only
+  const ringWrapRef = useRef(null); // outer: position only — no CSS transition
+  const ringRef     = useRef(null); // inner: size/border transitions only
+  const labelRef    = useRef(null);
 
   useEffect(() => {
-    // Check if device is mobile or touch-enabled
-    const checkDevice = () => {
-      const mobileQuery = window.matchMedia("(max-width: 768px)");
-      const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
-      setIsMobile(mobileQuery.matches || hasTouch);
+    // Kill on touch devices
+    if (window.matchMedia("(hover: none)").matches) return;
+
+    const dotWrap  = dotWrapRef.current;
+    const dot      = dotRef.current;
+    const ringWrap = ringWrapRef.current;
+    const ring     = ringRef.current;
+    const label    = labelRef.current;
+    if (!dotWrap || !dot || !ringWrap || !ring || !label) return;
+
+    // The visible text span lives inside the label wrapper div
+    const labelSpan = label.querySelector("span");
+
+    // Current actual mouse position
+    let mx = -200, my = -200;
+    // Ring lerp position
+    let rx = -200, ry = -200;
+    let rafId;
+    let cursorState = "default"; // "default" | "interactive" | "heading"
+
+    // ── RAF loop ──────────────────────────────────────────────
+    // Key: ONLY transform is updated here. No CSS transition on wrappers.
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const LERP_FACTOR = 0.18; // snappier feel
+
+    const tick = () => {
+      // Dot tracks mouse instantly
+      dotWrap.style.transform  = `translate(${mx}px,${my}px)`;
+
+      // Label tracks mouse instantly (offset by 16px)
+      label.style.transform    = `translate(${mx + 16}px,${my + 16}px)`;
+
+      // Ring lerps toward mouse
+      rx = lerp(rx, mx, LERP_FACTOR);
+      ry = lerp(ry, my, LERP_FACTOR);
+      ringWrap.style.transform = `translate(${rx}px,${ry}px)`;
+
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
+    // ── State helpers ─────────────────────────────────────────
+    const applyState = (state) => {
+      if (state === cursorState) return;
+      cursorState = state;
+
+      // Clear state classes from INNER elements only
+      ring.className = "c-ring-inner";
+      dot.className  = "c-dot-inner";
+      if (labelSpan) labelSpan.style.opacity = "0";
+
+      if (state === "interactive") {
+        ring.classList.add("ring-hover");
+        dot.classList.add("dot-hover");
+        if (labelSpan) labelSpan.style.opacity = "1";
+      } else if (state === "heading") {
+        ring.classList.add("ring-heading");
+        dot.classList.add("dot-heading");
+      }
     };
 
-    checkDevice();
-    window.addEventListener("resize", checkDevice);
-
-    const handleMouseMove = (e) => {
-      if (isMobile) return;
-      if (!isVisible) setIsVisible(true);
-      mouseCoords.current.x = e.clientX;
-      mouseCoords.current.y = e.clientY;
+    // ── Event listeners ───────────────────────────────────────
+    const onMove = (e) => {
+      mx = e.clientX;
+      my = e.clientY;
+      dotWrap.style.opacity  = "1";
+      ringWrap.style.opacity = "1";
     };
 
-    const handleMouseLeave = () => {
-      setIsVisible(false);
-    };
+    const onOver = (e) => {
+      const t = e.target;
+      if (!t) return;
 
-    const handleMouseEnter = () => {
-      setIsVisible(true);
-    };
-
-    // Detect hovered element class or tag
-    const handleMouseOver = (e) => {
-      if (isMobile) return;
-      const target = e.target;
-      if (!target) return;
-
-      const isScrambleTitle = target.classList.contains("scramble-title") || target.closest(".scramble-title");
-      if (isScrambleTitle) {
-        setCursorType("heading");
+      if (t.closest(".scramble-title")) {
+        applyState("heading");
         return;
       }
 
-      const isInteractive =
-        target.tagName === "A" ||
-        target.tagName === "BUTTON" ||
-        target.closest("a") ||
-        target.closest("button") ||
-        target.closest(".interactive") ||
-        target.closest(".glow-card") ||
-        target.getAttribute("role") === "button";
+      const el =
+        t.closest("a") ||
+        t.closest("button") ||
+        t.closest(".interactive") ||
+        t.closest(".glow-card");
 
-      if (isInteractive) {
-        setCursorType("interactive");
+      if (el) {
+        const href = el.getAttribute("href") || "";
+        const txt  = (el.textContent || "").toLowerCase();
+        let text = "VIEW →";
+        if (href.includes("github"))   text = "CODE ↗";
+        else if (href.includes("linkedin")) text = "CONNECT ↗";
+        else if (href.includes("leetcode")) text = "SOLVE ↗";
+        else if (href.includes("mailto"))   text = "SAY HI ✉";
+        else if (txt.includes("work") || txt.includes("project")) text = "EXPLORE ↓";
+        else if (txt.includes("touch") || txt.includes("contact"))text = "LET'S GO →";
+        if (labelSpan) labelSpan.textContent = text;
+        applyState("interactive");
       } else {
-        setCursorType("default");
+        applyState("default");
       }
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseleave", handleMouseLeave);
-    document.addEventListener("mouseenter", handleMouseEnter);
-    window.addEventListener("mouseover", handleMouseOver);
+    const onDown = () => {
+      ring.classList.add("ring-click");
+      setTimeout(() => ring.classList.remove("ring-click"), 200);
+    };
+
+    const onLeave = () => {
+      dotWrap.style.opacity  = "0";
+      ringWrap.style.opacity = "0";
+    };
+    const onEnter = () => {
+      dotWrap.style.opacity  = "1";
+      ringWrap.style.opacity = "1";
+    };
+
+    window.addEventListener("mousemove", onMove,  { passive: true });
+    window.addEventListener("mouseover", onOver,  { passive: true });
+    window.addEventListener("mousedown", onDown);
+    document.documentElement.addEventListener("mouseleave", onLeave);
+    document.documentElement.addEventListener("mouseenter", onEnter);
 
     return () => {
-      window.removeEventListener("resize", checkDevice);
-      window.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseleave", handleMouseLeave);
-      document.removeEventListener("mouseenter", handleMouseEnter);
-      window.removeEventListener("mouseover", handleMouseOver);
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseover", onOver);
+      window.removeEventListener("mousedown", onDown);
+      document.documentElement.removeEventListener("mouseleave", onLeave);
+      document.documentElement.removeEventListener("mouseenter", onEnter);
     };
-  }, [isMobile, isVisible]);
-
-  // Lerp loop for the trailing ring
-  useEffect(() => {
-    if (isMobile) return;
-
-    let animFrameId;
-
-    const render = () => {
-      const dot = dotRef.current;
-      const ring = ringRef.current;
-
-      if (dot && ring) {
-        // Zero delay for dot
-        dot.style.transform = `translate3d(${mouseCoords.current.x}px, ${mouseCoords.current.y}px, 0)`;
-
-        // Lerp lag for ring (lerp factor ~0.1)
-        const lerpFactor = 0.1;
-        ringCoords.current.x += (mouseCoords.current.x - ringCoords.current.x) * lerpFactor;
-        ringCoords.current.y += (mouseCoords.current.y - ringCoords.current.y) * lerpFactor;
-        
-        ring.style.transform = `translate3d(${ringCoords.current.x}px, ${ringCoords.current.y}px, 0)`;
-      }
-
-      animFrameId = requestAnimationFrame(render);
-    };
-
-    animFrameId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animFrameId);
-  }, [isMobile]);
-
-  if (isMobile || !isVisible) return null;
-
-  // Render sizing and styles based on cursorType
-  let dotSize = 8;
-  let ringSize = 40;
-  let ringStyle = {
-    borderColor: "rgba(77, 255, 180, 0.3)",
-    backgroundColor: "rgba(77, 255, 180, 0.05)",
-    borderWidth: "1.5px",
-  };
-
-  if (cursorType === "interactive") {
-    ringSize = 80;
-    ringStyle = {
-      borderColor: "rgba(77, 255, 180, 0.6)",
-      backgroundColor: "rgba(77, 255, 180, 0.15)",
-      borderWidth: "2px",
-    };
-  } else if (cursorType === "heading") {
-    dotSize = 0; // Dot disappears
-    ringSize = 250; // Spotlight sweeps
-    ringStyle = {
-      borderWidth: "0px",
-      backgroundColor: "transparent",
-      backgroundImage: "radial-gradient(circle, rgba(77, 255, 180, 0.15) 0%, rgba(77, 255, 180, 0.04) 40%, rgba(0, 0, 0, 0) 70%)",
-      mixBlendMode: "screen",
-    };
-  }
+  }, []);
 
   return (
     <>
-      {/* 1. Zero-delay Dot */}
-      <div
-        ref={dotRef}
-        className="fixed top-0 left-0 pointer-events-none z-[9999] will-change-transform"
-      >
-        <div
-          className="rounded-full bg-accent transition-all duration-200 ease-out"
-          style={{
-            width: `${dotSize}px`,
-            height: `${dotSize}px`,
-            marginLeft: `-${dotSize / 2}px`,
-            marginTop: `-${dotSize / 2}px`,
-            opacity: dotSize === 0 ? 0 : 1,
-          }}
-        />
+      {/* ── Inject all cursor styles once ── */}
+      <style>{`
+        @media (hover: hover) {
+          *, *::before, *::after { cursor: none !important; }
+        }
+
+        /* ── Position wrappers: NO transition (RAF owns these) ── */
+        .c-dot-wrap, .c-ring-wrap {
+          position: fixed;
+          top: 0; left: 0;
+          width: 0; height: 0;
+          pointer-events: none;
+          will-change: transform;
+          z-index: 999999;
+        }
+        .c-label-wrap {
+          position: fixed;
+          top: 0; left: 0;
+          width: 0; height: 0;
+          pointer-events: none;
+          will-change: transform;
+          z-index: 999999;
+        }
+
+        /* ── DOT inner ── */
+        .c-dot-inner {
+          width: 8px; height: 8px;
+          margin-left: -4px; margin-top: -4px;
+          border-radius: 50%;
+          background: #4DFFB4;
+          box-shadow: 0 0 8px #4DFFB4, 0 0 16px rgba(77,255,180,0.35);
+          /* transition ONLY for size & color — never for position */
+          transition:
+            width  0.22s cubic-bezier(.22,1,.36,1),
+            height 0.22s cubic-bezier(.22,1,.36,1),
+            margin 0.22s cubic-bezier(.22,1,.36,1),
+            background-color 0.22s ease,
+            box-shadow 0.22s ease,
+            opacity 0.22s ease;
+        }
+        .c-dot-inner.dot-hover {
+          width: 4px; height: 4px;
+          margin-left: -2px; margin-top: -2px;
+          background: #fff;
+          box-shadow: 0 0 6px rgba(255,255,255,0.8);
+        }
+        .c-dot-inner.dot-heading {
+          opacity: 0;
+        }
+
+        /* ── RING inner ── */
+        .c-ring-inner {
+          width: 40px; height: 40px;
+          margin-left: -20px; margin-top: -20px;
+          border-radius: 50%;
+          border: 1.5px solid rgba(77,255,180,0.65);
+          background: transparent;
+          box-shadow: 0 0 10px rgba(77,255,180,0.15);
+          /* transition ONLY for size & border — never for position */
+          transition:
+            width  0.32s cubic-bezier(.22,1,.36,1),
+            height 0.32s cubic-bezier(.22,1,.36,1),
+            margin 0.32s cubic-bezier(.22,1,.36,1),
+            border-color 0.28s ease,
+            box-shadow 0.28s ease,
+            background-color 0.28s ease,
+            transform 0.15s cubic-bezier(.22,1,.36,1);
+          animation: ring-pulse 2.8s ease-in-out infinite;
+        }
+        @keyframes ring-pulse {
+          0%,100% { box-shadow: 0 0 10px rgba(77,255,180,0.15); }
+          50%      { box-shadow: 0 0 20px rgba(77,255,180,0.30), 0 0 40px rgba(77,255,180,0.08); }
+        }
+        .c-ring-inner.ring-hover {
+          width: 64px; height: 64px;
+          margin-left: -32px; margin-top: -32px;
+          border-color: #4DFFB4;
+          background: rgba(77,255,180,0.04);
+          box-shadow: 0 0 24px rgba(77,255,180,0.45), 0 0 48px rgba(77,255,180,0.12);
+          animation: none;
+        }
+        .c-ring-inner.ring-heading {
+          width: 90px; height: 90px;
+          margin-left: -45px; margin-top: -45px;
+          border-color: rgba(77,255,180,0.22);
+          background: radial-gradient(circle, rgba(77,255,180,0.07) 0%, transparent 70%);
+          box-shadow: none;
+          animation: none;
+        }
+        .c-ring-inner.ring-click {
+          transform: scale(0.80);
+          animation: none;
+        }
+
+        /* ── Label ── */
+        .c-label {
+          font-size: 10px;
+          color: #4DFFB4;
+          font-family: 'Space Grotesk', sans-serif;
+          font-weight: 700;
+          letter-spacing: 0.15em;
+          white-space: nowrap;
+          opacity: 0;
+          text-shadow: 0 0 8px rgba(77,255,180,0.55);
+          transition: opacity 0.18s ease;
+        }
+      `}</style>
+
+      {/* DOT — outer wrap (no transition) + inner visual */}
+      <div ref={dotWrapRef} className="c-dot-wrap">
+        <div ref={dotRef} className="c-dot-inner" />
       </div>
 
-      {/* 2. Trailing Ring / Spotlight */}
-      <div
-        ref={ringRef}
-        className="fixed top-0 left-0 pointer-events-none z-[9998] will-change-transform"
+      {/* RING — outer wrap (no transition) + inner visual */}
+      <div ref={ringWrapRef} className="c-ring-wrap">
+        <div ref={ringRef} className="c-ring-inner" />
+      </div>
+
+      {/* LABEL */}
+      <div className="c-label-wrap" style={{ position:"fixed",top:0,left:0,width:0,height:0,pointerEvents:"none",willChange:"transform",zIndex:999999 }}
+        ref={(el) => { labelRef.current = el; }}
       >
-        <div
-          className="rounded-full border transition-all duration-300 ease-out"
-          style={{
-            width: `${ringSize}px`,
-            height: `${ringSize}px`,
-            marginLeft: `-${ringSize / 2}px`,
-            marginTop: `-${ringSize / 2}px`,
-            ...ringStyle,
-          }}
-        />
+        <span className="c-label" />
       </div>
     </>
   );
